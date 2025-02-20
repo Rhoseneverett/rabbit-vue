@@ -1,6 +1,6 @@
 <script setup>
-import { getUserOrder } from '@/apis/order'
-import { onMounted, ref } from 'vue'
+import { getUserOrder } from "@/apis/order";
+import { onMounted, ref } from "vue";
 
 const tabTypes = [
   { name: "all", label: "全部订单" },
@@ -9,59 +9,81 @@ const tabTypes = [
   { name: "receive", label: "待收货" },
   { name: "comment", label: "待评价" },
   { name: "complete", label: "已完成" },
-  { name: "cancel", label: "已取消" }
-]
+  { name: "cancel", label: "已取消" },
+];
 
-const orderList = ref([])
-const total = ref(0)
+const orderList = ref([]);
+const total = ref(0);
 const params = ref({
   orderState: 0,
   page: 1,
-  pageSize: 2
-})
-const getOrderList = async () => {
-  const res = await getUserOrder(params.value)
-  orderList.value = res.result.items
-  total.value = res.result.counts
-}
+  pageSize: 2,
+});
+// 新增加载状态变量
+const isLoading = ref(true);
 
-onMounted(() => getOrderList())
+const getOrderList = async () => {
+  try {
+    const res = await getUserOrder(params.value);
+    orderList.value = res.result.items;
+    total.value = res.result.counts;
+  } finally {
+    // 数据请求完成后，将加载状态设为 false
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  getOrderList();
+});
 
 const tabChange = (type) => {
-  console.log(type)
-  params.value.orderState = type
-  getOrderList()
-}
+  console.log(type);
+  params.value.orderState = type;
+  // 切换 tab 时，重新设置加载状态
+  isLoading.value = true;
+  getOrderList();
+};
 
 // 页数切换
 const pageChange = (page) => {
-  console.log(page)
-  params.value.page = page
-  getOrderList()
-}
-
+  console.log(page);
+  params.value.page = page;
+  // 切换页码时，重新设置加载状态
+  isLoading.value = true;
+  getOrderList();
+};
 
 const fomartPayState = (payState) => {
   const stateMap = {
-    1: '待付款',
-    2: '待发货',
-    3: '待收货',
-    4: '待评价',
-    5: '已完成',
-    6: '已取消'
-  }
-  return stateMap[payState]
-}
+    1: "待付款",
+    2: "待发货",
+    3: "待收货",
+    4: "待评价",
+    5: "已完成",
+    6: "已取消",
+  };
+  return stateMap[payState];
+};
 </script>
 
 <template>
   <div class="order-container">
     <el-tabs @tab-change="tabChange">
       <!-- tab切换 -->
-      <el-tab-pane v-for="item in tabTypes" :key="item.name" :label="item.label" />
+      <el-tab-pane
+        v-for="item in tabTypes"
+        :key="item.name"
+        :label="item.label"
+      />
 
       <div class="main-container">
-        <div class="holder-container" v-if="orderList.length === 0">
+        <div class="holder-container" v-if="isLoading">
+          <!-- 加载时显示正在获取订单数据 -->
+          <el-empty description="正在获取订单数据" />
+        </div>
+        <div v-else-if="orderList.length === 0">
+          <!-- 数据请求完成后，若没有订单数据，显示暂无订单数据 -->
           <el-empty description="暂无订单数据" />
         </div>
         <div v-else>
@@ -114,10 +136,18 @@ const fomartPayState = (payState) => {
                 <p>在线支付</p>
               </div>
               <div class="column action">
-                <el-button v-if="order.orderState === 1" type="primary" size="small">
+                <el-button
+                  v-if="order.orderState === 1"
+                  type="primary"
+                  size="small"
+                >
                   立即付款
                 </el-button>
-                <el-button v-if="order.orderState === 3" type="primary" size="small">
+                <el-button
+                  v-if="order.orderState === 3"
+                  type="primary"
+                  size="small"
+                >
                   确认收货
                 </el-button>
                 <p><a href="javascript:;">查看详情</a></p>
@@ -127,18 +157,25 @@ const fomartPayState = (payState) => {
                 <p v-if="[4, 5].includes(order.orderState)">
                   <a href="javascript:;">申请售后</a>
                 </p>
-                <p v-if="order.orderState === 1"><a href="javascript:;">取消订单</a></p>
+                <p v-if="order.orderState === 1">
+                  <a href="javascript:;">取消订单</a>
+                </p>
               </div>
             </div>
           </div>
           <!-- 分页 -->
           <div class="pagination-container">
-            <el-pagination :total="total" @current-change="pageChange" :page-size="params.pageSize" background
-              layout="prev, pager, next" />
+            <el-pagination
+              :total="total"
+              :current-page="params.page"
+              @current-change="pageChange"
+              :page-size="params.pageSize"
+              background
+              layout="prev, pager, next"
+            />
           </div>
         </div>
       </div>
-
     </el-tabs>
   </div>
 </template>
@@ -210,7 +247,7 @@ const fomartPayState = (payState) => {
       text-align: center;
       padding: 20px;
 
-      >p {
+      > p {
         padding-top: 10px;
       }
 
